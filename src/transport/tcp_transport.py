@@ -53,13 +53,13 @@ class TcpServerTransport(BaseTransport):
                             chunk = client.recv(4096)
                         except socket.timeout:
                             continue
+                        except OSError:
+                            break
                         if not chunk:
                             break
                         self.emit("rx", {"transport": f"TCP {address[0]}:{address[1]}", "data": chunk})
                 finally:
-                    client.close()
-                    self._client = None
-                    self._client_address = None
+                    self._close_client()
                     self.emit("client", None)
                     if not self._stop_event.is_set():
                         self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
@@ -78,14 +78,24 @@ class TcpServerTransport(BaseTransport):
             address = cast(tuple[str, int], self._client_address)
             self.emit("tx", {"transport": f"TCP {address[0]}:{address[1]}", "data": data})
 
+    def _close_client(self) -> None:
+        with self._send_lock:
+            client = self._client
+            self._client = None
+            self._client_address = None
+            if client is not None:
+                try:
+                    client.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+                client.close()
+
     def disconnect_client(self) -> None:
-        if self._client is not None:
-            self._client.close()
+        self._close_client()
 
     def stop(self) -> None:
         self._stop_event.set()
-        if self._client is not None:
-            self._client.close()
+        self._close_client()
         if self._server is not None:
             self._server.close()
         if self._thread and self._thread.is_alive():

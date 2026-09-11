@@ -27,6 +27,7 @@ class Asdu:
     record_address: int
     objects: list[InformationObject] = field(default_factory=list)
     raw: bytes = field(default_factory=bytes)
+    shared_time: bytes | None = None
 
     @property
     def object_count(self) -> int:

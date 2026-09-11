@@ -52,6 +52,7 @@ class FrameDecoder:
                 "measurement_point": parsed.asdu.measurement_point,
                 "record_address": parsed.asdu.record_address,
                 "objects": self._decode_objects(parsed),
+                "shared_time": self._decode_time_tag_a(parsed.asdu.shared_time) if parsed.asdu.shared_time else None,
             }
         return output
 
@@ -71,6 +72,14 @@ class FrameDecoder:
                 item["equipment_code"] = obj.data[3:11].decode("ascii", errors="ignore").strip()
             decoded.append(item)
         return decoded
+
+    def _decode_time_tag_a(self, payload: bytes) -> str:
+        minute = payload[0] & 0x3F
+        hour = payload[1] & 0x1F
+        day = payload[2] & 0x1F
+        month = payload[3] & 0x0F
+        year = 2000 + (payload[4] & 0x7F)
+        return datetime(year, month or 1, day or 1, hour, minute).isoformat(sep=" ")
 
     def _decode_time_tag_b(self, payload: bytes) -> str:
         milliseconds = payload[0] | ((payload[1] & 0x03) << 8)

@@ -279,7 +279,7 @@ def encode_24(value: float, scale: int = 1000) -> bytes:
 
 
 def encode_24_2(value: float, scale: int = 1000) -> bytes:
-    scaled = max(0, min(int(round(value * scale)), 0x3FFFFFF))
+    scaled = max(0, min(int(round(value * scale)), 0x3FFFFFFF))
     low = scaled & 0xFFFFFF
     high = (scaled >> 24) & 0x3F
     return low.to_bytes(3, "little") + bytes([high << 2])

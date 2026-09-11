@@ -99,6 +99,10 @@ class FrameParser:
         objects_blob = payload[6:]
         objects: list[InformationObject] = []
         object_count = vsq & 0x7F
+        shared_time: bytes | None = None
+        if type_id in {TYPE_INTEGRATED_TOTALS, TYPE_INCREMENTAL_TOTALS} and len(objects_blob) >= (object_count * 6) + 5:
+            shared_time = objects_blob[-5:]
+            objects_blob = objects_blob[:-5]
         offset = 0
         lengths = self._object_lengths(type_id, object_count, objects_blob)
         for length in lengths:
@@ -116,6 +120,7 @@ class FrameParser:
             record_address=record_address,
             objects=objects,
             raw=payload,
+            shared_time=shared_time,
         )
 
     def _object_lengths(self, type_id: int, count: int, blob: bytes) -> list[int]:

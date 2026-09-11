@@ -65,6 +65,7 @@ class ProtocolTests(unittest.TestCase):
         response = self.app.handle(self.parser.parse(encode_fixed_frame(MASTER_REQUEST_CLASS_2_DATA | 0x40, 1)))
         parsed_response = self.parser.parse(response.response.raw)
         self.assertEqual(parsed_response.asdu.type_id, TYPE_INTEGRATED_TOTALS)
+        self.assertIsNotNone(parsed_response.asdu.shared_time)
         first = parsed_response.asdu.objects[0]
         self.assertEqual(first.address, 1)
         self.assertEqual(int.from_bytes(first.data[:4], "little"), 223456789)
@@ -78,6 +79,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(parsed_response.asdu.cause, CAUSE_ADDRESS_UNKNOWN)
 
     def test_instant_values_response_contains_expected_blocks(self) -> None:
+        self.model.apply_updates({"energy": {"active_import": 223456.789}, "electrical": {"active_power_total": -1.0}})
         request_payload = bytes([162, 0x00, 0x05, 0x01, 0x00, 0x01])
         request_frame = encode_variable_frame(0x73, 1, request_payload)
         self.app.handle(self.parser.parse(request_frame))
@@ -85,6 +87,11 @@ class ProtocolTests(unittest.TestCase):
         parsed_response = self.parser.parse(response.response.raw)
         self.assertEqual(parsed_response.asdu.type_id, 163)
         self.assertEqual([obj.address for obj in parsed_response.asdu.objects], [192, 193, 194])
+        energy_block = parsed_response.asdu.objects[0].data
+        instant_energy = int.from_bytes(energy_block[:3], "little") | (((energy_block[3] & 0xFC) >> 2) << 24)
+        self.assertEqual(instant_energy, 223456789)
+        power_block = parsed_response.asdu.objects[1].data
+        self.assertEqual(power_block[:3], encode_24(-1.0))
 
     def test_signed_power_encoding_preserves_negative_values(self) -> None:
         self.assertEqual(encode_24(-1.0), bytes([0x18, 0xFC, 0xFF]))
