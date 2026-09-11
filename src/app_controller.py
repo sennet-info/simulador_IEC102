@@ -39,8 +39,8 @@ class SimulatorController(QObject):
         self.snapshot_changed.emit(snapshot)
         return snapshot
 
-    def apply_updates(self, updates: dict[str, object]) -> None:
-        self.model.apply_updates(updates)
+    def apply_updates(self, updates: dict[str, object], persist: bool = True) -> None:
+        self.model.apply_updates(updates, persist=persist)
         self.snapshot()
 
     def start(self) -> None:

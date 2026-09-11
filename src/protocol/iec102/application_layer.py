@@ -155,12 +155,15 @@ class ApplicationLayer:
             value = self._energy_for_object(item.address, energy)
             entries.append(bytes([item.address]) + encode_integrated_total(float(value)))
             parts.append(f"obj={item.address}:{float(value):.3f}")
+        objects = b"".join(entries)
+        if response_type in {TYPE_INTEGRATED_TOTALS, TYPE_INCREMENTAL_TOTALS}:
+            objects += encode_time_tag_a(datetime.fromisoformat(str(snapshot["meter_time"])))
         payload = self._encode_asdu(
             type_id=response_type,
             cause=CAUSE_REQUEST,
             measurement_point=request.measurement_point,
             record_address=request.record_address,
-            objects=b"".join(entries) + encode_time_tag_a(datetime.fromisoformat(str(snapshot["meter_time"]))),
+            objects=objects,
             object_count=len(entries),
         )
         return payload, f"ASDU {response_type} " + ", ".join(parts)

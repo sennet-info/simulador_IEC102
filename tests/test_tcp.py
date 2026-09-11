@@ -21,11 +21,24 @@ class TcpTransportTests(unittest.TestCase):
         transport = TcpServerTransport("127.0.0.1", port, callback)
         transport.start()
         self.addCleanup(transport.stop)
-        time.sleep(0.2)
-        client = socket.create_connection(("127.0.0.1", port), timeout=2)
+
+        deadline = time.time() + 2
+        last_error = None
+        client = None
+        while time.time() < deadline and client is None:
+            try:
+                client = socket.create_connection(("127.0.0.1", port), timeout=0.2)
+            except OSError as exc:
+                last_error = exc
+                time.sleep(0.05)
+        if client is None:
+            raise AssertionError(f"TCP server did not become ready: {last_error}")
         self.addCleanup(client.close)
         client.sendall(b"\x10\x49\x01\x00\x4A\x16")
-        time.sleep(0.3)
+
+        deadline = time.time() + 2
+        while time.time() < deadline and not any(event == "rx" for event, _ in events):
+            time.sleep(0.05)
         self.assertTrue(any(event == "rx" for event, _ in events))
 
 

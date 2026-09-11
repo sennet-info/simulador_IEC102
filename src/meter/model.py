@@ -159,7 +159,7 @@ class MeterModel:
             return datetime.now()
         return datetime.fromisoformat(self.addressing.custom_meter_time)
 
-    def apply_updates(self, updates: dict[str, object]) -> None:
+    def apply_updates(self, updates: dict[str, object], persist: bool = True) -> None:
         with self._lock:
             electrical = updates.get("electrical", {})
             for key, value in electrical.items():
@@ -195,7 +195,8 @@ class MeterModel:
                 for key, value in updates["iec102"].items():
                     setattr(self.addressing, key, value)
             self._last_simulation_tick = time.monotonic()
-        self.save_config()
+        if persist:
+            self.save_config()
 
     def _advance_energy_locked(self) -> None:
         now = time.monotonic()

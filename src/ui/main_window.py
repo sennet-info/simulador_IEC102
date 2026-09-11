@@ -105,13 +105,21 @@ class MainWindow(QMainWindow):
         self.apply_snapshot(self.controller.snapshot())
 
     def start_transport(self) -> None:
-        self.apply_changes()
+        previous_snapshot = self.controller.snapshot()
+        updates = self._collect_updates()
+        self.controller.apply_updates(updates, persist=False)
         try:
             self.controller.start()
+            self.controller.model.save_config()
         except Exception as exc:
+            self.controller.apply_updates(previous_snapshot, persist=False)
+            self.apply_snapshot(previous_snapshot)
             QMessageBox.critical(self, "Start error", str(exc))
 
     def apply_changes(self) -> None:
+        self.controller.apply_updates(self._collect_updates())
+
+    def _collect_updates(self) -> dict[str, object]:
         updates = {}
         updates.update(self.communication.to_updates())
         updates.update(self.meter.to_updates())
@@ -124,7 +132,7 @@ class MainWindow(QMainWindow):
             "use_system_time": self.use_system_time.isChecked(),
             "custom_meter_time": self.custom_meter_time.text() or None,
         }
-        self.controller.apply_updates(updates)
+        return updates
 
     def apply_snapshot(self, snapshot: dict[str, object]) -> None:
         self.communication.apply_snapshot(snapshot)
