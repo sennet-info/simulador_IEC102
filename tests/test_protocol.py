@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from src.meter.model import MeterModel
-from src.protocol.iec102.application_layer import ApplicationLayer
+from src.protocol.iec102.application_layer import ApplicationLayer, encode_24
 from src.protocol.iec102.constants import (
     CAUSE_ADDRESS_UNKNOWN,
     MASTER_REQUEST_CLASS_2_DATA,
@@ -76,6 +76,18 @@ class ProtocolTests(unittest.TestCase):
         response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
         parsed_response = self.parser.parse(response.response.raw)
         self.assertEqual(parsed_response.asdu.cause, CAUSE_ADDRESS_UNKNOWN)
+
+    def test_instant_values_response_contains_expected_blocks(self) -> None:
+        request_payload = bytes([162, 0x00, 0x05, 0x01, 0x00, 0x01])
+        request_frame = encode_variable_frame(0x73, 1, request_payload)
+        self.app.handle(self.parser.parse(request_frame))
+        response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
+        parsed_response = self.parser.parse(response.response.raw)
+        self.assertEqual(parsed_response.asdu.type_id, 163)
+        self.assertEqual([obj.address for obj in parsed_response.asdu.objects], [192, 193, 194])
+
+    def test_signed_power_encoding_preserves_negative_values(self) -> None:
+        self.assertEqual(encode_24(-1.0), bytes([0x18, 0xFC, 0xFF]))
 
     def test_incremental_totals_response_type(self) -> None:
         request_payload = bytes([123, 0x00, 0x05, 0x01, 0x00, 0x01])

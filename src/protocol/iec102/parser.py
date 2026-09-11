@@ -130,7 +130,7 @@ class FrameParser:
         if type_id == TYPE_INSTANT_VALUES:
             mapping = {
                 OBJECT_INSTANT_ENERGY_BLOCK: 30,
-                OBJECT_INSTANT_POWER_BLOCK: 39,
+                OBJECT_INSTANT_POWER_BLOCK: 38,
                 OBJECT_INSTANT_VOLTAGE_CURRENT_BLOCK: 27,
             }
             lengths: list[int] = []

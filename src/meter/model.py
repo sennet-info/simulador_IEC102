@@ -144,7 +144,7 @@ class MeterModel:
             return {
                 "electrical": deepcopy(self.electrical.to_dict()),
                 "energy": deepcopy(self.energy.to_dict()),
-                "addressing": deepcopy(asdict(self.addressing)),
+                "iec102": deepcopy(asdict(self.addressing)),
                 "communication": {
                     "mode": self.communication.mode,
                     "serial": deepcopy(asdict(self.communication.serial)),

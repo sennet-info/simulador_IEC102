@@ -18,6 +18,7 @@ from src.transport.tcp_transport import TcpServerTransport
 
 class SimulatorController(QObject):
     monitor_event = Signal(str)
+    monitor_cleared = Signal()
     status_changed = Signal(str)
     client_changed = Signal(str)
     snapshot_changed = Signal(dict)
@@ -80,7 +81,7 @@ class SimulatorController(QObject):
 
     def clear_monitor(self) -> None:
         self.logger.clear()
-        self.monitor_event.emit("")
+        self.monitor_cleared.emit()
 
     def save_log(self) -> None:
         path = self.logger.save()

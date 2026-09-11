@@ -31,12 +31,12 @@ class ProtocolMonitorWidget(QWidget):
         self.open_button.clicked.connect(self.open_logs_directory)
 
     def append_entry(self, text: str) -> None:
-        if not text:
-            self.text_edit.clear()
-            return
         if self.text_edit.toPlainText():
             self.text_edit.append("")
         self.text_edit.append(text)
+
+    def clear_entries(self) -> None:
+        self.text_edit.clear()
 
     def open_logs_directory(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.log_directory.resolve())))

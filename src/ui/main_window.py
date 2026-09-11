@@ -92,6 +92,7 @@ class MainWindow(QMainWindow):
         self.protocol_monitor.clear_button.clicked.connect(self.controller.clear_monitor)
         self.protocol_monitor.save_button.clicked.connect(self.controller.save_log)
         self.controller.monitor_event.connect(self.protocol_monitor.append_entry)
+        self.controller.monitor_cleared.connect(self.protocol_monitor.clear_entries)
         self.controller.status_changed.connect(self.on_status_changed)
         self.controller.client_changed.connect(self.communication.client_label.setText)
         self.controller.snapshot_changed.connect(self.apply_snapshot)
@@ -129,7 +130,7 @@ class MainWindow(QMainWindow):
         self.communication.apply_snapshot(snapshot)
         self.meter.apply_snapshot(snapshot)
         self.energy.apply_snapshot(snapshot)
-        addressing = snapshot["addressing"]
+        addressing = snapshot["iec102"]
         self.link_address.setText(str(addressing["link_address"]))
         self.measurement_point.setText(str(addressing["measurement_point"]))
         self.record_address.setText(str(addressing["record_address"]))

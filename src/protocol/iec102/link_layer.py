@@ -3,10 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .constants import (
-    MASTER_REQUEST_CLASS_2_DATA,
-    MASTER_REQUEST_LINK_STATUS,
-    MASTER_RESET_REMOTE_LINK,
-    MASTER_SEND_USER_DATA,
     SLAVE_ACK,
     SLAVE_NACK,
     SLAVE_NO_DATA,
@@ -39,13 +35,3 @@ class LinkLayer:
     def user_data(self, address: int, payload: bytes, description: str) -> LinkResponse:
         return LinkResponse(encode_variable_frame(SLAVE_USER_DATA, address, payload), description)
 
-    def respond_to_non_data_request(self, frame: LinkFrame) -> LinkResponse | None:
-        if frame.function_code == MASTER_RESET_REMOTE_LINK:
-            return self.ack(frame.address, "Link reset acknowledged")
-        if frame.function_code == MASTER_REQUEST_LINK_STATUS:
-            return self.status(frame.address, "Link status")
-        if frame.function_code == MASTER_REQUEST_CLASS_2_DATA:
-            return self.no_data(frame.address, "No class 2 data queued")
-        if frame.function_code == MASTER_SEND_USER_DATA:
-            return None
-        return self.nack(frame.address, f"Unsupported function {frame.function_code}")

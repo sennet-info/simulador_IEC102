@@ -71,7 +71,7 @@ class ApplicationLayer:
             return ApplicationResult(response, response.description)
 
         snapshot = self.meter_model.snapshot()
-        addressing = snapshot["addressing"]
+        addressing = snapshot["iec102"]
         if frame.address != int(addressing["link_address"]):
             response = self.link_layer.nack(frame.address, "Link address mismatch")
             return ApplicationResult(response, response.description)
@@ -126,8 +126,8 @@ class ApplicationLayer:
         payload = self._encode_asdu(
             type_id=TYPE_MANUFACTURER_IDENTIFICATION,
             cause=CAUSE_REQUEST,
-            measurement_point=int(snapshot["addressing"]["measurement_point"]),
-            record_address=int(snapshot["addressing"]["record_address"]),
+            measurement_point=int(snapshot["iec102"]["measurement_point"]),
+            record_address=int(snapshot["iec102"]["record_address"]),
             objects=objects,
             object_count=1,
         )
@@ -139,8 +139,8 @@ class ApplicationLayer:
         payload = self._encode_asdu(
             type_id=TYPE_CURRENT_TIME,
             cause=CAUSE_REQUEST,
-            measurement_point=int(snapshot["addressing"]["measurement_point"]),
-            record_address=int(snapshot["addressing"]["record_address"]),
+            measurement_point=int(snapshot["iec102"]["measurement_point"]),
+            record_address=int(snapshot["iec102"]["record_address"]),
             objects=objects,
             object_count=1,
         )
@@ -191,24 +191,25 @@ class ApplicationLayer:
     def _encode_instant_values(self, snapshot: dict[str, object]) -> tuple[bytes, str]:
         electrical = snapshot["electrical"]
         energy = snapshot["energy"]
+        meter_time = datetime.fromisoformat(str(snapshot["meter_time"]))
         objects = b"".join(
             [
-                bytes([OBJECT_INSTANT_ENERGY_BLOCK]) + self._encode_energy_block(energy),
-                bytes([OBJECT_INSTANT_POWER_BLOCK]) + self._encode_power_block(electrical),
-                bytes([OBJECT_INSTANT_VOLTAGE_CURRENT_BLOCK]) + self._encode_voltage_current_block(electrical),
+                bytes([OBJECT_INSTANT_ENERGY_BLOCK]) + self._encode_energy_block(energy, meter_time),
+                bytes([OBJECT_INSTANT_POWER_BLOCK]) + self._encode_power_block(electrical, meter_time),
+                bytes([OBJECT_INSTANT_VOLTAGE_CURRENT_BLOCK]) + self._encode_voltage_current_block(electrical, meter_time),
             ]
         )
         payload = self._encode_asdu(
             type_id=TYPE_INSTANT_VALUES,
             cause=CAUSE_REQUEST,
-            measurement_point=int(snapshot["addressing"]["measurement_point"]),
-            record_address=int(snapshot["addressing"]["record_address"]),
+            measurement_point=int(snapshot["iec102"]["measurement_point"]),
+            record_address=int(snapshot["iec102"]["record_address"]),
             objects=objects,
             object_count=3,
         )
         return payload, "ASDU 163 instant values"
 
-    def _encode_energy_block(self, energy: dict[str, object]) -> bytes:
+    def _encode_energy_block(self, energy: dict[str, object], meter_time: datetime) -> bytes:
         return b"".join(
             [
                 encode_24_2(float(energy["active_import"])),
@@ -218,9 +219,9 @@ class ApplicationLayer:
                 encode_24_2(0.0),
                 encode_24_2(float(energy["reactive_export"])),
             ]
-        ) + encode_time_tag_a(datetime.now())
+        ) + encode_time_tag_a(meter_time)
 
-    def _encode_power_block(self, electrical: dict[str, object]) -> bytes:
+    def _encode_power_block(self, electrical: dict[str, object], meter_time: datetime) -> bytes:
         return b"".join(
             [
                 encode_24(float(electrical["active_power_total"])),
@@ -236,9 +237,9 @@ class ApplicationLayer:
                 encode_24(float(electrical["reactive_power"]) / 3.0),
                 encode_pf(float(electrical["power_factor"])),
             ]
-        ) + encode_time_tag_a(datetime.now())
+        ) + encode_time_tag_a(meter_time)
 
-    def _encode_voltage_current_block(self, electrical: dict[str, object]) -> bytes:
+    def _encode_voltage_current_block(self, electrical: dict[str, object], meter_time: datetime) -> bytes:
         return b"".join(
             [
                 encode_24(float(electrical["current_l1"]), scale=10),
@@ -248,7 +249,7 @@ class ApplicationLayer:
                 encode_24(float(electrical["current_l3"]), scale=10),
                 encode_24_2(float(electrical["voltage_l3"]), scale=10),
             ]
-        ) + encode_time_tag_a(datetime.now())
+        ) + encode_time_tag_a(meter_time)
 
     def _encode_asdu(self, type_id: int, cause: int, measurement_point: int, record_address: int, objects: bytes, object_count: int) -> bytes:
         vsq = object_count & 0x7F
@@ -270,7 +271,10 @@ def encode_integrated_total(value: float, qualifier: int = 0x40) -> bytes:
 
 
 def encode_24(value: float, scale: int = 1000) -> bytes:
-    scaled = max(0, min(int(round(value * scale)), 0xFFFFFF))
+    scaled = int(round(value * scale))
+    scaled = max(-(1 << 23), min(scaled, (1 << 23) - 1))
+    if scaled < 0:
+        scaled = (1 << 24) + scaled
     return scaled.to_bytes(3, "little")
 
 
