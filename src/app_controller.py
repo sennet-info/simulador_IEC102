@@ -9,7 +9,6 @@ from src.logging.protocol_logger import ProtocolEvent, ProtocolLogger
 from src.meter.model import MeterModel
 from src.protocol.iec102.application_layer import ApplicationLayer
 from src.protocol.iec102.decoder import FrameDecoder
-from src.protocol.iec102.frame import format_hex
 from src.protocol.iec102.parser import FrameParseError, FrameParser
 from src.transport.base import BaseTransport, TransportStatus
 from src.transport.serial_transport import SerialTransport
@@ -34,7 +33,6 @@ class SimulatorController(QObject):
         self.logger = ProtocolLogger(repository_root / "logs")
         self.transport: BaseTransport | None = None
         self._rx_buffer = bytearray()
-        self._pending_tx_descriptions: list[str] = []
 
     def snapshot(self) -> dict[str, object]:
         snapshot = self.model.snapshot()
@@ -65,7 +63,6 @@ class SimulatorController(QObject):
             tcp = communication["tcp"]
             self.transport = TcpServerTransport(host=tcp["host"], port=int(tcp["port"]), callback=self._handle_transport_event)
         self._rx_buffer.clear()
-        self._pending_tx_descriptions.clear()
         self.transport.start()
 
     def stop(self) -> None:
@@ -96,20 +93,16 @@ class SimulatorController(QObject):
         if event == "client":
             self.client_changed.emit(str(payload or ""))
             return
-        if event in {"rx", "tx"}:
+        if event == "rx":
             raw = payload["data"]
             transport = payload["transport"]
-            if event == "rx":
-                self._rx_buffer.extend(raw)
-                frames = self.parser.extract_frames(self._rx_buffer)
-                if frames:
-                    for frame_bytes in frames:
-                        self._process_frame("RX", transport, frame_bytes)
-                else:
-                    self._record_protocol_event("RX", transport, raw, "Partial frame buffered")
+            self._rx_buffer.extend(raw)
+            frames = self.parser.extract_frames(self._rx_buffer)
+            if frames:
+                for frame_bytes in frames:
+                    self._process_frame("RX", transport, frame_bytes)
             else:
-                decoded = self._pending_tx_descriptions.pop(0) if self._pending_tx_descriptions else "Raw transport write"
-                self._record_protocol_event("TX", transport, raw, decoded)
+                self._record_protocol_event("RX", transport, raw, "Partial frame buffered")
 
     def _process_frame(self, direction: str, transport: str, frame_bytes: bytes) -> None:
         try:
@@ -119,8 +112,8 @@ class SimulatorController(QObject):
             self._record_protocol_event(direction, transport, frame_bytes, decoded_text)
             if direction == "RX" and self.transport is not None:
                 result = self.application.handle(parsed)
-                self._pending_tx_descriptions.append(result.decoded)
                 self.transport.send(result.response.raw)
+                self._record_protocol_event("TX", transport, result.response.raw, result.decoded)
         except FrameParseError as exc:
             self._record_protocol_event(direction, transport, frame_bytes, f"Parse error: {exc}")
         except Exception as exc:

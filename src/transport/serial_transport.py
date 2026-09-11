@@ -68,7 +68,6 @@ class SerialTransport(BaseTransport):
         if self._serial is None:
             raise RuntimeError("Serial port is not open")
         self._serial.write(data)
-        self.emit("tx", {"transport": f"SERIAL {self.port}", "data": data})
 
     def stop(self) -> None:
         self._stop_event.set()

@@ -75,8 +75,6 @@ class TcpServerTransport(BaseTransport):
             if self._client is None:
                 raise RuntimeError("No TCP client connected")
             self._client.sendall(data)
-            address = cast(tuple[str, int], self._client_address)
-            self.emit("tx", {"transport": f"TCP {address[0]}:{address[1]}", "data": data})
 
     def _close_client(self) -> None:
         with self._send_lock:
@@ -92,6 +90,9 @@ class TcpServerTransport(BaseTransport):
 
     def disconnect_client(self) -> None:
         self._close_client()
+        self.emit("client", None)
+        if self._server is not None and not self._stop_event.is_set():
+            self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
 
     def stop(self) -> None:
         self._stop_event.set()

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTextEdit, QVBoxLayout, QWidget
 
 
 class ProtocolMonitorWidget(QWidget):
+    clear_requested = Signal()
+    save_requested = Signal()
+
     def __init__(self, log_directory: Path) -> None:
         super().__init__()
         self.log_directory = log_directory
@@ -36,6 +39,9 @@ class ProtocolMonitorWidget(QWidget):
         layout.addLayout(controls)
         layout.addWidget(self.text_edit)
 
+        self.clear_button.clicked.connect(self.clear_entries)
+        self.clear_button.clicked.connect(self.clear_requested.emit)
+        self.save_button.clicked.connect(self.save_requested.emit)
         self.open_button.clicked.connect(self.open_logs_directory)
 
     def append_entry(self, text: str) -> None:
