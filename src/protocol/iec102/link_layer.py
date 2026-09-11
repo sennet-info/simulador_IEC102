@@ -13,7 +13,7 @@ from .encoder import encode_fixed_frame, encode_variable_frame
 from .frame import LinkFrame
 
 
-@dataclass(slots=True)
+@dataclass
 class LinkResponse:
     raw: bytes
     description: str
@@ -34,4 +34,3 @@ class LinkLayer:
 
     def user_data(self, address: int, payload: bytes, description: str) -> LinkResponse:
         return LinkResponse(encode_variable_frame(SLAVE_USER_DATA, address, payload), description)
-

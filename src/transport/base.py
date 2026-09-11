@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Callable, Protocol
 
 
-@dataclass(slots=True)
+@dataclass
 class TransportStatus:
     state: str
     detail: str = ""

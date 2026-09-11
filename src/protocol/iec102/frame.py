@@ -9,7 +9,7 @@ class FrameKind(str, Enum):
     VARIABLE = "variable"
 
 
-@dataclass(slots=True)
+@dataclass
 class LinkFrame:
     kind: FrameKind
     control: int

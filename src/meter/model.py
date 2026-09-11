@@ -22,7 +22,7 @@ from src.protocol.iec102.constants import (
 )
 
 
-@dataclass(slots=True)
+@dataclass
 class IECAddressing:
     link_address: int = 1
     measurement_point: int = 1
@@ -32,7 +32,7 @@ class IECAddressing:
     custom_meter_time: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class SerialSettings:
     port: str = "COM1"
     baudrate: int = DEFAULT_BAUDRATE
@@ -42,20 +42,20 @@ class SerialSettings:
     timeout: float = DEFAULT_SERIAL_TIMEOUT
 
 
-@dataclass(slots=True)
+@dataclass
 class TcpSettings:
     host: str = DEFAULT_TCP_HOST
     port: int = DEFAULT_TCP_PORT
 
 
-@dataclass(slots=True)
+@dataclass
 class CommunicationSettings:
     mode: str = "tcp"
     serial: SerialSettings = field(default_factory=SerialSettings)
     tcp: TcpSettings = field(default_factory=TcpSettings)
 
 
-@dataclass(slots=True)
+@dataclass
 class MeterProfile:
     name: str = "Generic IEC 60870-5-102 Meter"
     manufacturer: str = "GEN"
@@ -209,4 +209,3 @@ class MeterModel:
         self.energy.reactive_import += max(self.electrical.reactive_power, 0.0) * hours
         self.energy.active_import_tariffs.total = self.energy.active_import
         self.energy.reactive_import_tariffs.total = self.energy.reactive_import
-

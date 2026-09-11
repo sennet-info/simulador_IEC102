@@ -21,7 +21,7 @@ class FrameParseError(ValueError):
     pass
 
 
-@dataclass(slots=True)
+@dataclass
 class ParsedFrame:
     frame: LinkFrame
     asdu: Asdu | None = None

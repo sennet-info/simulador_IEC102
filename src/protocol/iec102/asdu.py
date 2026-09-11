@@ -5,20 +5,20 @@ from datetime import datetime
 from typing import Any
 
 
-@dataclass(slots=True)
+@dataclass
 class TimeRange:
     start: datetime | None = None
     end: datetime | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class InformationObject:
     address: int
     data: bytes = field(default_factory=bytes)
     decoded: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class Asdu:
     type_id: int
     vsq: int

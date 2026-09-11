@@ -2,6 +2,14 @@
 
 Aplicación Python/PySide6 para Windows 10 orientada a laboratorio, pensada para simular un contador eléctrico IEC 60870-5-102 mediante TCP o puerto serie.
 
+## Requisitos
+
+- Windows 10 x64
+- Python 3.9.9
+- Entorno virtual `.venv`
+- Compatibilidad mínima del código: Python 3.9
+- Dependencias instaladas desde `requirements.txt`
+
 ## Estado actual
 
 Primera versión funcional con:
@@ -28,18 +36,19 @@ src/
 └── logging/
 ```
 
-## Instalación
+## Instalación en Windows CMD
 
-```bash
+```bat
 python -m venv .venv
-source .venv/bin/activate  # En Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
 ## Arranque
 
-```bash
-python src/main.py
+```bat
+python src\main.py
 ```
 
 ## Uso básico
@@ -87,6 +96,9 @@ build_windows.bat
 ```
 
 Genera `dist/IEC102MeterSimulator.exe` con PyInstaller.
+
+El script usa explícitamente `.venv\Scripts\python.exe`, muestra la versión de ese intérprete al inicio y construye el ejecutable con ese mismo Python del entorno virtual.
+Para mantener compatibilidad con Python 3.9.9, el propio script limita la actualización de `pip` a una versión compatible antes de instalar dependencias y ejecutar PyInstaller.
 
 ## Logs
 

@@ -38,7 +38,7 @@ from .link_layer import LinkLayer, LinkResponse
 from .parser import ParsedFrame
 
 
-@dataclass(slots=True)
+@dataclass
 class ApplicationResult:
     response: LinkResponse
     decoded: str

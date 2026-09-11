@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 
-@dataclass(slots=True)
+@dataclass
 class ElectricalValues:
     voltage_l1: float = 230.0
     voltage_l2: float = 230.0

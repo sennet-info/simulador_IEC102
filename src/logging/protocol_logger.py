@@ -7,7 +7,7 @@ from pathlib import Path
 from src.protocol.iec102.frame import format_hex
 
 
-@dataclass(slots=True)
+@dataclass
 class ProtocolEvent:
     timestamp: datetime
     direction: str

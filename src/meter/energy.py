@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field
 from src.protocol.iec102.constants import DEFAULT_TIME_ACCELERATION
 
 
-@dataclass(slots=True)
+@dataclass
 class TariffValues:
     total: float = 0.0
     t1: float = 0.0
@@ -17,7 +17,7 @@ class TariffValues:
         return asdict(self)
 
 
-@dataclass(slots=True)
+@dataclass
 class EnergyValues:
     active_import: float = 123456.789
     active_export: float = 0.0
