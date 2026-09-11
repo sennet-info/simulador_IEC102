@@ -110,10 +110,12 @@ class SimulatorController(QObject):
             decoded_map = self.decoder.decode_frame(parsed)
             decoded_text = self._format_decoded_map(decoded_map)
             self._record_protocol_event(direction, transport, frame_bytes, decoded_text)
-            if direction == "RX" and self.transport is not None:
-                result = self.application.handle(parsed)
-                self.transport.send(result.response.raw)
-                self._record_protocol_event("TX", transport, result.response.raw, result.decoded)
+            if direction == "RX":
+                active_transport = self.transport
+                if active_transport is not None:
+                    result = self.application.handle(parsed)
+                    active_transport.send(result.response.raw)
+                    self._record_protocol_event("TX", transport, result.response.raw, result.decoded)
         except FrameParseError as exc:
             self._record_protocol_event(direction, transport, frame_bytes, f"Parse error: {exc}")
         except Exception as exc:

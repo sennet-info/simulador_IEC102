@@ -42,6 +42,6 @@ class ProtocolLogger:
         self.events.clear()
 
     def save(self) -> Path:
-        target = self.log_directory / f"iec102_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        target = self.log_directory / f"iec102_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]}.log"
         target.write_text("\n".join(event.to_log_line() for event in self.events), encoding="utf-8")
         return target

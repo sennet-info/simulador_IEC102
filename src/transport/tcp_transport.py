@@ -59,10 +59,10 @@ class TcpServerTransport(BaseTransport):
                             break
                         self.emit("rx", {"transport": f"TCP {address[0]}:{address[1]}", "data": chunk})
                 finally:
-                    self._close_client()
-                    self.emit("client", None)
-                    if not self._stop_event.is_set():
-                        self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
+                    if self._close_client():
+                        self.emit("client", None)
+                        if not self._stop_event.is_set():
+                            self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
         except OSError as exc:
             self.emit("status", TransportStatus("ERROR", str(exc)))
         finally:
@@ -76,23 +76,25 @@ class TcpServerTransport(BaseTransport):
                 raise RuntimeError("No TCP client connected")
             self._client.sendall(data)
 
-    def _close_client(self) -> None:
+    def _close_client(self) -> bool:
         with self._send_lock:
             client = self._client
             self._client = None
             self._client_address = None
-            if client is not None:
-                try:
-                    client.shutdown(socket.SHUT_RDWR)
-                except OSError:
-                    pass
-                client.close()
+            if client is None:
+                return False
+            try:
+                client.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            client.close()
+            return True
 
     def disconnect_client(self) -> None:
-        self._close_client()
-        self.emit("client", None)
-        if self._server is not None and not self._stop_event.is_set():
-            self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
+        if self._close_client():
+            self.emit("client", None)
+            if self._server is not None and not self._stop_event.is_set():
+                self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
 
     def stop(self) -> None:
         self._stop_event.set()

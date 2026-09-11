@@ -70,6 +70,17 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(first.address, 1)
         self.assertEqual(int.from_bytes(first.data[:4], "little"), 223456789)
 
+    def test_integrated_totals_range_request_returns_reactive_values(self) -> None:
+        self.model.apply_updates({"energy": {"reactive_import": 333.0, "reactive_export": 444.0}})
+        request_payload = bytes([TYPE_READ_INTEGRATED_TOTALS, 0x01, 0x05, 0x01, 0x00, 0x01, 0x03, 0x06])
+        request_frame = encode_variable_frame(0x73, 1, request_payload)
+        self.app.handle(self.parser.parse(request_frame))
+        response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
+        parsed_response = self.parser.parse(response.response.raw)
+        self.assertEqual([obj.address for obj in parsed_response.asdu.objects], [3, 4, 5, 6])
+        values = [int.from_bytes(obj.data[:4], "little") for obj in parsed_response.asdu.objects]
+        self.assertEqual(values, [333000, 333000, 444000, 444000])
+
     def test_wrong_measurement_point_queues_address_error(self) -> None:
         request_payload = bytes([TYPE_READ_INTEGRATED_TOTALS, 0x00, 0x05, 0x02, 0x00, 0x01])
         request_frame = encode_variable_frame(0x73, 1, request_payload)

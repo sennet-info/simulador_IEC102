@@ -185,9 +185,9 @@ class ApplicationLayer:
             return float(energy["active_import"])
         if address == OBJECT_ACTIVE_EXPORT:
             return float(energy["active_export"])
-        if address == OBJECT_REACTIVE_IMPORT_Q1:
+        if address in {OBJECT_REACTIVE_IMPORT_Q1, 4}:
             return float(energy["reactive_import"])
-        if address == OBJECT_REACTIVE_EXPORT_Q4:
+        if address in {5, OBJECT_REACTIVE_EXPORT_Q4}:
             return float(energy["reactive_export"])
         return 0.0
 
