@@ -23,17 +23,17 @@ class TcpServerTransport(BaseTransport):
         if self._thread and self._thread.is_alive():
             return
         self._stop_event.clear()
+        self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._server.bind((self.host, int(self.port)))
+        self._server.listen(1)
+        self._server.settimeout(0.5)
+        self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     def _run(self) -> None:
         try:
-            self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._server.bind((self.host, int(self.port)))
-            self._server.listen(1)
-            self._server.settimeout(0.5)
-            self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
             while not self._stop_event.is_set():
                 try:
                     client, address = self._server.accept()
@@ -64,7 +64,8 @@ class TcpServerTransport(BaseTransport):
                         if not self._stop_event.is_set():
                             self.emit("status", TransportStatus("LISTENING", f"{self.host}:{self.port}"))
         except OSError as exc:
-            self.emit("status", TransportStatus("ERROR", str(exc)))
+            if not self._stop_event.is_set():
+                self.emit("status", TransportStatus("ERROR", str(exc)))
         finally:
             if self._server is not None:
                 self._server.close()

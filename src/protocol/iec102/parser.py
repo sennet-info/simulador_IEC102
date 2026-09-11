@@ -100,9 +100,10 @@ class FrameParser:
         objects: list[InformationObject] = []
         object_count = vsq & 0x7F
         shared_time: bytes | None = None
-        if type_id in {TYPE_INTEGRATED_TOTALS, TYPE_INCREMENTAL_TOTALS} and len(objects_blob) >= (object_count * 6) + 5:
-            shared_time = objects_blob[-5:]
-            objects_blob = objects_blob[:-5]
+        expected_object_bytes = object_count * 6
+        if type_id in {TYPE_INTEGRATED_TOTALS, TYPE_INCREMENTAL_TOTALS} and len(objects_blob) >= expected_object_bytes + 5:
+            shared_time = objects_blob[expected_object_bytes:expected_object_bytes + 5]
+            objects_blob = objects_blob[:expected_object_bytes]
         offset = 0
         lengths = self._object_lengths(type_id, object_count, objects_blob)
         for length in lengths:

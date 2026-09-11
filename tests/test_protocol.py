@@ -65,6 +65,7 @@ class ProtocolTests(unittest.TestCase):
         response = self.app.handle(self.parser.parse(encode_fixed_frame(MASTER_REQUEST_CLASS_2_DATA | 0x40, 1)))
         parsed_response = self.parser.parse(response.response.raw)
         self.assertEqual(parsed_response.asdu.type_id, TYPE_INTEGRATED_TOTALS)
+        self.assertEqual(len(parsed_response.asdu.objects), 4)
         self.assertIsNotNone(parsed_response.asdu.shared_time)
         first = parsed_response.asdu.objects[0]
         self.assertEqual(first.address, 1)

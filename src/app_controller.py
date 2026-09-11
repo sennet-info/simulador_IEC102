@@ -96,26 +96,25 @@ class SimulatorController(QObject):
         if event == "rx":
             raw = payload["data"]
             transport = payload["transport"]
+            active_transport = self.transport
             self._rx_buffer.extend(raw)
             frames = self.parser.extract_frames(self._rx_buffer)
             if frames:
                 for frame_bytes in frames:
-                    self._process_frame("RX", transport, frame_bytes)
+                    self._process_frame("RX", transport, frame_bytes, active_transport)
             else:
                 self._record_protocol_event("RX", transport, raw, "Partial frame buffered")
 
-    def _process_frame(self, direction: str, transport: str, frame_bytes: bytes) -> None:
+    def _process_frame(self, direction: str, transport: str, frame_bytes: bytes, active_transport: BaseTransport | None = None) -> None:
         try:
             parsed = self.parser.parse(frame_bytes)
             decoded_map = self.decoder.decode_frame(parsed)
             decoded_text = self._format_decoded_map(decoded_map)
             self._record_protocol_event(direction, transport, frame_bytes, decoded_text)
-            if direction == "RX":
-                active_transport = self.transport
-                if active_transport is not None:
-                    result = self.application.handle(parsed)
-                    active_transport.send(result.response.raw)
-                    self._record_protocol_event("TX", transport, result.response.raw, result.decoded)
+            if direction == "RX" and active_transport is not None and active_transport is self.transport:
+                result = self.application.handle(parsed)
+                active_transport.send(result.response.raw)
+                self._record_protocol_event("TX", transport, result.response.raw, result.decoded)
         except FrameParseError as exc:
             self._record_protocol_event(direction, transport, frame_bytes, f"Parse error: {exc}")
         except Exception as exc:

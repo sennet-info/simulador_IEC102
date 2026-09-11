@@ -35,30 +35,31 @@ class SerialTransport(BaseTransport):
     def start(self) -> None:
         if serial is None:
             self.emit("status", TransportStatus("ERROR", "pyserial is not installed"))
-            return
+            raise RuntimeError("pyserial is not installed")
         if self._thread and self._thread.is_alive():
             return
         self._stop_event.clear()
+        self._serial = serial.Serial(
+            port=self.port,
+            baudrate=int(self.baudrate),
+            bytesize=int(self.bytesize),
+            parity=self.parity,
+            stopbits=int(self.stopbits),
+            timeout=float(self.timeout),
+        )
+        self.emit("status", TransportStatus("CONNECTED", self.port))
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     def _run(self) -> None:
         try:
-            self._serial = serial.Serial(
-                port=self.port,
-                baudrate=int(self.baudrate),
-                bytesize=int(self.bytesize),
-                parity=self.parity,
-                stopbits=int(self.stopbits),
-                timeout=float(self.timeout),
-            )
-            self.emit("status", TransportStatus("CONNECTED", self.port))
             while not self._stop_event.is_set() and self._serial is not None:
                 chunk = self._serial.read(4096)
                 if chunk:
                     self.emit("rx", {"transport": f"SERIAL {self.port}", "data": chunk})
         except Exception as exc:  # pragma: no cover - requires serial device
-            self.emit("status", TransportStatus("ERROR", str(exc)))
+            if not self._stop_event.is_set():
+                self.emit("status", TransportStatus("ERROR", str(exc)))
         finally:
             if self._serial is not None:
                 self._serial.close()
