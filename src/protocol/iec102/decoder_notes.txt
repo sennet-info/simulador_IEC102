@@ -1,0 +1,2 @@
+IEC 60870-5-102 support in this repository is intentionally conservative.
+Use docs/IEC102_IMPLEMENTATION_STATUS.md for the authoritative status of verified vs TODO behaviour.

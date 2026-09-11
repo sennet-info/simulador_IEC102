@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from src.meter.model import MeterModel
+from src.protocol.iec102.application_layer import ApplicationLayer
+from src.protocol.iec102.constants import (
+    CAUSE_ADDRESS_UNKNOWN,
+    MASTER_REQUEST_CLASS_2_DATA,
+    MASTER_SEND_USER_DATA,
+    TYPE_CURRENT_TIME,
+    TYPE_INCREMENTAL_TOTALS,
+    TYPE_INTEGRATED_TOTALS,
+    TYPE_READ_CURRENT_TIME,
+    TYPE_READ_INTEGRATED_TOTALS,
+)
+from src.protocol.iec102.encoder import encode_fixed_frame, encode_variable_frame
+from src.protocol.iec102.parser import FrameParseError, FrameParser
+
+ROOT = Path(__file__).resolve().parents[1]
+PROFILE = ROOT / "profiles" / "generic_iec102.json"
+
+
+class ProtocolTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.parser = FrameParser()
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.model = MeterModel(Path(self.tempdir.name) / "config.json", PROFILE)
+        self.app = ApplicationLayer(self.model)
+
+    def test_parse_fixed_frame(self) -> None:
+        frame = encode_fixed_frame(0x49, 1)
+        parsed = self.parser.parse(frame)
+        self.assertEqual(parsed.frame.address, 1)
+        self.assertEqual(parsed.frame.function_code, 9)
+
+    def test_invalid_checksum_raises(self) -> None:
+        with self.assertRaises(FrameParseError):
+            self.parser.parse(bytes([0x10, 0x49, 0x01, 0x00, 0x00, 0x16]))
+
+    def test_incomplete_variable_frame_raises(self) -> None:
+        with self.assertRaises(FrameParseError):
+            self.parser.parse(bytes([0x68, 0x05, 0x05, 0x68, 0x73]))
+
+    def test_read_current_time_is_queued_then_returned_on_class2_poll(self) -> None:
+        request_payload = bytes([TYPE_READ_CURRENT_TIME, 0x00, 0x05, 0x01, 0x00, 0x01])
+        request_frame = encode_variable_frame(0x73, 1, request_payload)
+        ack = self.app.handle(self.parser.parse(request_frame))
+        self.assertEqual(ack.response.raw[0], 0x10)
+        self.assertIn("queued", ack.decoded.lower())
+
+        poll_frame = encode_fixed_frame(0x5B, 1)
+        response = self.app.handle(self.parser.parse(poll_frame))
+        parsed_response = self.parser.parse(response.response.raw)
+        self.assertEqual(parsed_response.asdu.type_id, TYPE_CURRENT_TIME)
+
+    def test_integrated_totals_response_contains_configured_energy(self) -> None:
+        self.model.apply_updates({"energy": {"active_import": 223456.789, "reactive_import": 333.0}})
+        request_payload = bytes([TYPE_READ_INTEGRATED_TOTALS, 0x00, 0x05, 0x01, 0x00, 0x01])
+        request_frame = encode_variable_frame(0x73, 1, request_payload)
+        self.app.handle(self.parser.parse(request_frame))
+        response = self.app.handle(self.parser.parse(encode_fixed_frame(MASTER_REQUEST_CLASS_2_DATA | 0x40, 1)))
+        parsed_response = self.parser.parse(response.response.raw)
+        self.assertEqual(parsed_response.asdu.type_id, TYPE_INTEGRATED_TOTALS)
+        first = parsed_response.asdu.objects[0]
+        self.assertEqual(first.address, 1)
+        self.assertEqual(int.from_bytes(first.data[:4], "little"), 223456789)
+
+    def test_wrong_measurement_point_queues_address_error(self) -> None:
+        request_payload = bytes([TYPE_READ_INTEGRATED_TOTALS, 0x00, 0x05, 0x02, 0x00, 0x01])
+        request_frame = encode_variable_frame(0x73, 1, request_payload)
+        self.app.handle(self.parser.parse(request_frame))
+        response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
+        parsed_response = self.parser.parse(response.response.raw)
+        self.assertEqual(parsed_response.asdu.cause, CAUSE_ADDRESS_UNKNOWN)
+
+    def test_incremental_totals_response_type(self) -> None:
+        request_payload = bytes([123, 0x00, 0x05, 0x01, 0x00, 0x01])
+        request_frame = encode_variable_frame(0x73, 1, request_payload)
+        self.app.handle(self.parser.parse(request_frame))
+        response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
+        parsed_response = self.parser.parse(response.response.raw)
+        self.assertEqual(parsed_response.asdu.type_id, TYPE_INCREMENTAL_TOTALS)
+
+
+if __name__ == "__main__":
+    unittest.main()
