@@ -1,0 +1,14 @@
+{
+  "name": "Generic IEC 60870-5-102 Meter",
+  "manufacturer": "GEN",
+  "equipment_code": "IEC102SIM",
+  "link_address": 1,
+  "measurement_point": 1,
+  "record_address": 1,
+  "supported_asdu_types": [71, 72, 8, 11, 163],
+  "supported_request_types": [100, 103, 122, 123, 162, 183, 187],
+  "notes": [
+    "Laboratory-oriented generic profile",
+    "Subset intentionally limited to validated simulator features"
+  ]
+}
