@@ -95,7 +95,9 @@ class MainWindow(QMainWindow):
         self.controller.monitor_cleared.connect(self.protocol_monitor.clear_entries)
         self.controller.status_changed.connect(self.on_status_changed)
         self.controller.client_changed.connect(self.communication.client_label.setText)
-        self.controller.snapshot_changed.connect(self.apply_snapshot)
+        # Periodic/implicit snapshots only refresh live values; editable
+        # configuration (COM port, mode, addressing) is applied explicitly.
+        self.controller.snapshot_changed.connect(self.apply_live_snapshot)
         self.controller.log_saved.connect(self.on_log_saved)
 
         self._timer = QTimer(self)
@@ -133,6 +135,10 @@ class MainWindow(QMainWindow):
             "custom_meter_time": self.custom_meter_time.text() or None,
         }
         return updates
+
+    def apply_live_snapshot(self, snapshot: dict[str, object]) -> None:
+        self.meter.apply_snapshot(snapshot)
+        self.energy.apply_snapshot(snapshot)
 
     def apply_snapshot(self, snapshot: dict[str, object]) -> None:
         self.communication.apply_snapshot(snapshot)

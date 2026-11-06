@@ -5,10 +5,30 @@
   "link_address": 1,
   "measurement_point": 1,
   "record_address": 1,
-  "supported_asdu_types": [71, 72, 8, 11, 163],
-  "supported_request_types": [100, 103, 122, 123, 162, 183, 187],
+  "supported_asdu_types": [
+    71,
+    72,
+    8,
+    11,
+    157,
+    163
+  ],
+  "supported_request_types": [
+    100,
+    103,
+    122,
+    123,
+    156,
+    162,
+    183,
+    187
+  ],
   "notes": [
     "Laboratory-oriented generic profile",
     "Subset intentionally limited to validated simulator features"
-  ]
+  ],
+  "voltage_primary": 1,
+  "voltage_secondary": 1,
+  "current_primary": 1,
+  "current_secondary": 1
 }

@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from .constants import (
+    CAUSE_ACTIVATION,
+    CAUSE_ACTIVATION_CONFIRM,
     CAUSE_ADDRESS_UNKNOWN,
     CAUSE_ASDU_NOT_AVAILABLE,
     CAUSE_DATA_NOT_AVAILABLE,
@@ -10,7 +12,10 @@ from .constants import (
     TYPE_CURRENT_TIME,
     TYPE_INCREMENTAL_TOTALS,
     TYPE_INSTANT_VALUES,
+    TYPE_GENERAL_VALUES,
     TYPE_INTEGRATED_TOTALS,
+    TYPE_LOGIN,
+    TYPE_LOGOUT,
     TYPE_MANUFACTURER_IDENTIFICATION,
 )
 from .frame import LinkFrame, format_hex
@@ -18,6 +23,8 @@ from .parser import ParsedFrame
 
 CAUSE_NAMES = {
     CAUSE_REQUEST: "requested",
+    CAUSE_ACTIVATION: "activation",
+    CAUSE_ACTIVATION_CONFIRM: "activation-confirm",
     CAUSE_DATA_NOT_AVAILABLE: "data-not-available",
     CAUSE_ASDU_NOT_AVAILABLE: "asdu-not-available",
     CAUSE_ADDRESS_UNKNOWN: "address-unknown",
@@ -29,6 +36,9 @@ TYPE_NAMES = {
     TYPE_MANUFACTURER_IDENTIFICATION: "manufacturer-identification",
     TYPE_CURRENT_TIME: "current-time",
     TYPE_INSTANT_VALUES: "instant-values",
+    TYPE_GENERAL_VALUES: "general-values",
+    TYPE_LOGIN: "session-login",
+    TYPE_LOGOUT: "session-logout",
 }
 
 

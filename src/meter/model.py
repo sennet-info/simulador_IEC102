@@ -61,7 +61,13 @@ class MeterProfile:
     manufacturer: str = "GEN"
     equipment_code: str = "IEC102SIM"
     supported_asdu_types: list[int] = field(default_factory=lambda: [71, 72, 8, 11, 163])
-    supported_request_types: list[int] = field(default_factory=lambda: [100, 103, 122, 123, 162, 183, 187])
+    supported_request_types: list[int] = field(default_factory=lambda: [100, 103, 122, 123, 156, 162, 183, 187])
+    # Transformer ratios reported in ASDU 157 object 198 (primary/secondary).
+    # 1/1 = direct-connected meter, so the master does not rescale V and I.
+    voltage_primary: int = 1
+    voltage_secondary: int = 1
+    current_primary: int = 1
+    current_secondary: int = 1
 
 
 class MeterModel:
@@ -91,6 +97,10 @@ class MeterModel:
             equipment_code=data.get("equipment_code", self.profile.equipment_code),
             supported_asdu_types=data.get("supported_asdu_types", self.profile.supported_asdu_types),
             supported_request_types=data.get("supported_request_types", self.profile.supported_request_types),
+            voltage_primary=int(data.get("voltage_primary", self.profile.voltage_primary)),
+            voltage_secondary=int(data.get("voltage_secondary", self.profile.voltage_secondary)),
+            current_primary=int(data.get("current_primary", self.profile.current_primary)),
+            current_secondary=int(data.get("current_secondary", self.profile.current_secondary)),
         )
         self.addressing.link_address = data.get("link_address", self.addressing.link_address)
         self.addressing.measurement_point = data.get("measurement_point", self.addressing.measurement_point)

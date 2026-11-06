@@ -54,8 +54,15 @@ class SerialTransport(BaseTransport):
     def _run(self) -> None:
         try:
             while not self._stop_event.is_set() and self._serial is not None:
-                chunk = self._serial.read(4096)
+                # read(1) returns as soon as the first byte arrives (the timeout only
+                # bounds the idle wait); then drain whatever is already buffered.
+                # Reading a large fixed size would block for the whole timeout and
+                # delay every answer by ~1 s, past the master's response timeout.
+                chunk = self._serial.read(1)
                 if chunk:
+                    waiting = self._serial.in_waiting
+                    if waiting:
+                        chunk += self._serial.read(waiting)
                     self.emit("rx", {"transport": f"SERIAL {self.port}", "data": chunk})
         except Exception as exc:  # pragma: no cover - requires serial device
             if not self._stop_event.is_set():

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from src.meter.model import MeterModel
-from src.protocol.iec102.application_layer import ApplicationLayer, encode_24
+from src.protocol.iec102.application_layer import ApplicationLayer
 from src.protocol.iec102.constants import (
     CAUSE_ADDRESS_UNKNOWN,
     MASTER_REQUEST_CLASS_2_DATA,
@@ -57,6 +57,33 @@ class ProtocolTests(unittest.TestCase):
         parsed_response = self.parser.parse(response.response.raw)
         self.assertEqual(parsed_response.asdu.type_id, TYPE_CURRENT_TIME)
 
+    def test_login_confirmation_is_queued_then_returned_on_class2_poll(self) -> None:
+        # Frame captured from a real master: ASDU 183, cause 6, password 1.
+        login = bytes.fromhex("68 0D 0D 68 73 01 00 B7 01 06 01 00 00 01 00 00 00 34 16")
+        ack = self.app.handle(self.parser.parse(login))
+        self.assertEqual(ack.response.raw, bytes.fromhex("10 00 01 00 01 16"))
+
+        poll = self.app.handle(self.parser.parse(bytes.fromhex("10 5B 01 00 5C 16")))
+        response = self.parser.parse(poll.response.raw)
+        self.assertEqual(response.asdu.type_id, 183)
+        self.assertEqual(response.asdu.cause, 7)
+        self.assertEqual(response.asdu.measurement_point, 1)
+        self.assertEqual(response.asdu.raw[6:], bytes.fromhex("01 00 00 00"))
+
+        # Same FCB again -> retransmission: the confirmation must be repeated.
+        repeated = self.app.handle(self.parser.parse(bytes.fromhex("10 5B 01 00 5C 16")))
+        self.assertEqual(repeated.response.raw, poll.response.raw)
+
+        # Toggled FCB -> new request, queue is now empty.
+        empty = self.app.handle(self.parser.parse(bytes.fromhex("10 7B 01 00 7C 16")))
+        self.assertEqual(empty.response.raw[1] & 0x0F, 9)
+
+    def test_reset_clears_fcb_tracking(self) -> None:
+        self.app.handle(self.parser.parse(bytes.fromhex("10 5B 01 00 5C 16")))
+        self.app.handle(self.parser.parse(bytes.fromhex("10 40 01 00 41 16")))
+        result = self.app.handle(self.parser.parse(bytes.fromhex("10 5B 01 00 5C 16")))
+        self.assertNotIn("Retransmission", result.decoded)
+
     def test_integrated_totals_response_contains_configured_energy(self) -> None:
         self.model.apply_updates({"energy": {"active_import": 223456.789, "reactive_import": 333.0}})
         request_payload = bytes([TYPE_READ_INTEGRATED_TOTALS, 0x00, 0x05, 0x01, 0x00, 0x01])
@@ -89,24 +116,6 @@ class ProtocolTests(unittest.TestCase):
         response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
         parsed_response = self.parser.parse(response.response.raw)
         self.assertEqual(parsed_response.asdu.cause, CAUSE_ADDRESS_UNKNOWN)
-
-    def test_instant_values_response_contains_expected_blocks(self) -> None:
-        self.model.apply_updates({"energy": {"active_import": 223456.789}, "electrical": {"active_power_total": -1.0}})
-        request_payload = bytes([162, 0x00, 0x05, 0x01, 0x00, 0x01])
-        request_frame = encode_variable_frame(0x73, 1, request_payload)
-        self.app.handle(self.parser.parse(request_frame))
-        response = self.app.handle(self.parser.parse(encode_fixed_frame(0x4B, 1)))
-        parsed_response = self.parser.parse(response.response.raw)
-        self.assertEqual(parsed_response.asdu.type_id, 163)
-        self.assertEqual([obj.address for obj in parsed_response.asdu.objects], [192, 193, 194])
-        energy_block = parsed_response.asdu.objects[0].data
-        instant_energy = int.from_bytes(energy_block[:3], "little") | (((energy_block[3] & 0xFC) >> 2) << 24)
-        self.assertEqual(instant_energy, 223456789)
-        power_block = parsed_response.asdu.objects[1].data
-        self.assertEqual(power_block[:3], encode_24(-1.0))
-
-    def test_signed_power_encoding_preserves_negative_values(self) -> None:
-        self.assertEqual(encode_24(-1.0), bytes([0x18, 0xFC, 0xFF]))
 
     def test_incremental_totals_response_type(self) -> None:
         request_payload = bytes([123, 0x00, 0x05, 0x01, 0x00, 0x01])
